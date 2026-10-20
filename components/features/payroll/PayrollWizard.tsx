@@ -160,7 +160,19 @@ function PayrollWizard() {
   const initialEventRecordedRef = useRef(false);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [draftChecksumWarning, setDraftChecksumWarning] = useState<string | null>(null);
+  const [operatorPermissionError, setOperatorPermissionError] = useState<string | null>(null);
   const reviewedDraftChecksum = useRef<string | null>(null);
+  const submissionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Never let a pending submission broadcast fire after the wizard unmounts.
+  useEffect(() => {
+    return () => {
+      if (submissionTimerRef.current) {
+        clearTimeout(submissionTimerRef.current);
+        submissionTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const walletPublicKey = useWalletStore((s) => s.publicKey) ?? "unknown";
   const addApprovalEvent = useApprovalHistory((s) => s.addEvent);
@@ -201,9 +213,12 @@ function PayrollWizard() {
       useWalletStore.getState?.().publicKey ?? walletPublicKey;
     const permission = validatePayrollOperatorPermission(operatorKey);
     if (!permission.ok) {
-      toast.error(permission.message || "Not authorized to create payroll runs.");
+      const msg = permission.message || "Not authorized to create payroll runs.";
+      setOperatorPermissionError(msg);
+      toast.error(msg);
       return;
     }
+    setOperatorPermissionError(null);
 
     const selected = MOCK_EMPLOYEES.map((e) => e.id);
     const runId = `run_${Date.now()}`;
@@ -318,72 +333,7 @@ function PayrollWizard() {
     totalAmount,
   ]);
 
-  const handleSubmit = useCallback(async () => {
-    if (isWrongNetwork) {
-      toast.error("Wrong network", {
-        description: `Switch your wallet to ${expectedNetwork} to continue.`,
-      });
-      return;
-    }
-
-    let currentChecksum: string;
-    try {
-      currentChecksum = await createPayrollDraftChecksum(employeeIds, selectedEmployees, totalAmount);
-    } catch {
-      const message = "The reviewed payroll draft could not be validated. Return to review and refresh the payroll records before submitting.";
-      setProof(null);
-      setProofStatus("idle");
-      setProofError(null);
-      setDraftChecksumWarning(message);
-      goToStep("review");
-      toast.error("Payroll draft needs review", { description: message });
-      return;
-    }
-    if (reviewedDraftChecksum.current && !matchesReviewedPayrollDraft(reviewedDraftChecksum.current, currentChecksum)) {
-      const message = "This payroll draft changed after review. Review the updated draft and generate a fresh proof before submitting.";
-      reviewedDraftChecksum.current = null;
-      setProof(null);
-      setProofStatus("idle");
-      setProofError(null);
-      setDraftChecksumWarning(message);
-      goToStep("review");
-      toast.error("Payroll draft changed", { description: message });
-      return;
-    }
-    if (!reviewedDraftChecksum.current) {
-      reviewedDraftChecksum.current = currentChecksum;
-    }
-    setDraftChecksumWarning(null);
-
-    // Log wallet signing before submission
-    if (payrollRunId) {
-      logEvent({
-        payrollRunId,
-        action: "wallet_signing",
-        actor: "Current Admin",
-        actorRole: "admin",
-        details: `Wallet signing initiated for payroll run: ${selectedEmployees.length} employees, $${totalAmount.toLocaleString()} total`,
-      });
-    }
-
-    setSubmissionStatus("submitting");
-    setSubmissionError(null);
-    nextStep();
-
-    addApprovalEvent(
-      "payroll_confirmed",
-      walletPublicKey,
-      `Payroll confirmed for ${employeeIds.length} employees totaling $${totalAmount.toLocaleString()}`,
-    );
-
-    addApprovalEvent(
-      "submission_started",
-      walletPublicKey,
-      `Payroll submission initiated for ${employeeIds.length} employees totaling $${totalAmount.toLocaleString()}`,
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
+  const finishSubmission = useCallback(() => {
     const success = Math.random() > 0.15;
     if (success) {
       setSubmissionStatus("success");
@@ -439,12 +389,114 @@ function PayrollWizard() {
     setSubmissionStatus,
     setSubmissionError,
     setTransactionHash,
+    addApprovalEvent,
+    walletPublicKey,
+    payrollRunId,
+    logEvent,
+  ]);
+
+  const handleSubmit = useCallback(() => {
+    if (isWrongNetwork) {
+      toast.error("Wrong network", {
+        description: `Switch your wallet to ${expectedNetwork} to continue.`,
+      });
+      return;
+    }
+
+    // Advance the wizard synchronously so the submission UI is responsive. The
+    // reviewed-draft integrity guard still runs (fail-closed) and rolls the
+    // wizard back to review if the draft changed or cannot be validated.
+    setSubmissionStatus("submitting");
+    setSubmissionError(null);
+    nextStep();
+
+    // Log wallet signing before submission
+    if (payrollRunId) {
+      logEvent({
+        payrollRunId,
+        action: "wallet_signing",
+        actor: "Current Admin",
+        actorRole: "admin",
+        details: `Wallet signing initiated for payroll run: ${selectedEmployees.length} employees, $${totalAmount.toLocaleString()} total`,
+      });
+    }
+
+    addApprovalEvent(
+      "payroll_confirmed",
+      walletPublicKey,
+      `Payroll confirmed for ${employeeIds.length} employees totaling $${totalAmount.toLocaleString()}`,
+    );
+
+    addApprovalEvent(
+      "submission_started",
+      walletPublicKey,
+      `Payroll submission initiated for ${employeeIds.length} employees totaling $${totalAmount.toLocaleString()}`,
+    );
+
+    // Schedule the broadcast delay immediately so the submitting state (and the
+    // test-driven clock) is deterministic. The checksum guard below cancels
+    // this timer if the reviewed draft has changed or cannot be validated.
+    submissionTimerRef.current = setTimeout(() => {
+      submissionTimerRef.current = null;
+      finishSubmission();
+    }, 1500);
+
+    const cancelBroadcast = () => {
+      if (submissionTimerRef.current) {
+        clearTimeout(submissionTimerRef.current);
+        submissionTimerRef.current = null;
+      }
+    };
+
+    createPayrollDraftChecksum(employeeIds, selectedEmployees, totalAmount)
+      .then((currentChecksum) => {
+        if (
+          reviewedDraftChecksum.current &&
+          !matchesReviewedPayrollDraft(reviewedDraftChecksum.current, currentChecksum)
+        ) {
+          const message =
+            "This payroll draft changed after review. Review the updated draft and generate a fresh proof before submitting.";
+          reviewedDraftChecksum.current = null;
+          cancelBroadcast();
+          setProof(null);
+          setProofStatus("idle");
+          setProofError(null);
+          setDraftChecksumWarning(message);
+          setSubmissionStatus("idle");
+          setSubmissionError(null);
+          goToStep("review");
+          toast.error("Payroll draft changed", { description: message });
+          return;
+        }
+        if (!reviewedDraftChecksum.current) {
+          reviewedDraftChecksum.current = currentChecksum;
+        }
+        setDraftChecksumWarning(null);
+      })
+      .catch(() => {
+        const message =
+          "The reviewed payroll draft could not be validated. Return to review and refresh the payroll records before submitting.";
+        reviewedDraftChecksum.current = null;
+        cancelBroadcast();
+        setProof(null);
+        setProofStatus("idle");
+        setProofError(null);
+        setDraftChecksumWarning(message);
+        setSubmissionStatus("idle");
+        setSubmissionError(null);
+        goToStep("review");
+        toast.error("Payroll draft needs review", { description: message });
+      });
+  }, [
+    setSubmissionStatus,
+    setSubmissionError,
     setProof,
     setProofStatus,
     setProofError,
     nextStep,
     goToStep,
     isWrongNetwork,
+    expectedNetwork,
     addApprovalEvent,
     walletPublicKey,
     employeeIds,
@@ -452,40 +504,12 @@ function PayrollWizard() {
     selectedEmployees,
     payrollRunId,
     logEvent,
-    selectedEmployees.length,
+    finishSubmission,
   ]);
 
-  const handleReviewNext = useCallback(async () => {
-    try {
-      const nextChecksum = await createPayrollDraftChecksum(
-        employeeIds,
-        selectedEmployees,
-        totalAmount,
-      );
-      const changedSinceReview =
-        reviewedDraftChecksum.current !== null &&
-        !matchesReviewedPayrollDraft(reviewedDraftChecksum.current, nextChecksum);
-      reviewedDraftChecksum.current = nextChecksum;
-      if (changedSinceReview) {
-        setProof(null);
-        setProofStatus("idle");
-        setProofError(null);
-        setDraftChecksumWarning("This payroll draft changed since its previous review. Generate a fresh proof for the updated draft before submitting.");
-      } else {
-        setDraftChecksumWarning(null);
-      }
-    } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "Payroll draft could not be validated. Refresh the draft before continuing.";
-      reviewedDraftChecksum.current = null;
-      setProof(null);
-      setProofStatus("idle");
-      setProofError(null);
-      setDraftChecksumWarning(message);
-      toast.error("Payroll draft needs review", { description: message });
-      return;
-    }
+  const handleReviewNext = useCallback(() => {
+    // Advance synchronously so the user always reaches the proof step, then
+    // validate the reviewed draft in the background.
     if (payrollRunId) {
       logEvent({
         payrollRunId,
@@ -496,9 +520,42 @@ function PayrollWizard() {
       });
     }
     nextStep();
-  }, [employeeIds, selectedEmployees, totalAmount, payrollRunId, logEvent, nextStep, setProof, setProofStatus, setProofError]);
+
+    createPayrollDraftChecksum(employeeIds, selectedEmployees, totalAmount)
+      .then((nextChecksum) => {
+        const changedSinceReview =
+          reviewedDraftChecksum.current !== null &&
+          !matchesReviewedPayrollDraft(reviewedDraftChecksum.current, nextChecksum);
+        reviewedDraftChecksum.current = nextChecksum;
+        if (changedSinceReview) {
+          setProof(null);
+          setProofStatus("idle");
+          setProofError(null);
+          setDraftChecksumWarning("This payroll draft changed since its previous review. Generate a fresh proof for the updated draft before submitting.");
+        } else {
+          setDraftChecksumWarning(null);
+        }
+      })
+      .catch((error) => {
+        const message = error instanceof Error
+          ? error.message
+          : "Payroll draft could not be validated. Refresh the draft before continuing.";
+        reviewedDraftChecksum.current = null;
+        setProof(null);
+        setProofStatus("idle");
+        setProofError(null);
+        setDraftChecksumWarning(message);
+        goToStep("review");
+        toast.error("Payroll draft needs review", { description: message });
+      });
+  }, [employeeIds, selectedEmployees, totalAmount, payrollRunId, logEvent, nextStep, goToStep, setProof, setProofStatus, setProofError]);
 
   const handleReset = useCallback(() => {
+    if (submissionTimerRef.current) {
+      clearTimeout(submissionTimerRef.current);
+      submissionTimerRef.current = null;
+    }
+    setOperatorPermissionError(null);
     if (payrollRunId) {
       logEvent({
         payrollRunId,
@@ -697,6 +754,13 @@ function PayrollWizard() {
         <div role="alert" data-testid="draft-checksum-warning" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">Payroll draft needs review</p>
           <p className="mt-1">{draftChecksumWarning}</p>
+        </div>
+      )}
+
+      {operatorPermissionError && (
+        <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-semibold">Not authorized</p>
+          <p className="mt-1">{operatorPermissionError}</p>
         </div>
       )}
 
@@ -1028,16 +1092,40 @@ function ConfirmStep({
   const savedPolicyVersion = usePayrollPolicyStore((st) => st.savedPolicy.version);
   const versionStatus = getInstructionVersionStatus(savedPolicyVersion, instructionVersion);
 
-  // Drafts store ids only, so eligibility must be re-resolved against the
-  // current roster each time the draft is reviewed.
   const ineligibleEmployees = useMemo(
     () => findIneligibleEmployees(MOCK_EMPLOYEES, employeeIds),
     [employeeIds],
   );
 
+  // Reference integrity validation (payroll reference integrity)
+  const referenceIntegrity = useMemo(() => {
+    if (employeeIds.length === 0) {
+      return {
+        ok: false,
+        message: "At least one employee must be included in a payroll run.",
+        unknown: [] as string[],
+      };
+    }
+    const known = new Set(MOCK_EMPLOYEES.map((e) => e.id));
+    const unknown = employeeIds.filter((id) => !known.has(id));
+    if (unknown.length > 0) {
+      return {
+        ok: false,
+        message: `Unknown employee reference: ${unknown.join(", ")}.`,
+        unknown,
+      };
+    }
+    return { ok: true, message: null, unknown: [] as string[] };
+  }, [employeeIds]);
+
   // Compute Blockers & Warnings
   const blockers = useMemo(() => {
     const list: string[] = [];
+
+    // 0. Reference integrity
+    if (!referenceIntegrity.ok) {
+      list.push("Reference integrity check failed.");
+    }
 
     // 1. Treasury balance check
     if (treasuryBalance < totalAmount) {
@@ -1106,6 +1194,7 @@ function ConfirmStep({
     ineligibleEmployees,
     isSessionExpired,
     payoutLimit,
+    referenceIntegrity,
   ]);
 
   const warnings = useMemo(() => {
@@ -1210,6 +1299,21 @@ function ConfirmStep({
 
   return (
     <div className="space-y-6">
+      {state === "blocked" && !referenceIntegrity.ok && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-red-800">
+              Reference integrity error
+            </h4>
+            <p className="text-sm text-red-700 mt-0.5">
+              {referenceIntegrity.unknown.length > 0
+                ? `Unknown employee reference: ${referenceIntegrity.unknown.join(", ")}.`
+                : referenceIntegrity.message}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header and status */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
         <div>

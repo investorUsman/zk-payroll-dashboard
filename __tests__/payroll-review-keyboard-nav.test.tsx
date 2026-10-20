@@ -133,7 +133,7 @@ describe("Payroll review toolbar keyboard navigation (Issue #271)", () => {
         onApprove={onApproveArg}
       />,
     );
-    const btn = screen.getAllByRole("button", { name: /approve amendment/i })[0];
+    const btn = screen.getAllByRole("button", { name: /approve amendment/i }).at(-1)!;
     fireEvent.click(btn);
     expect(onApproveArg).toHaveBeenCalledWith(validAmendment.id);
   });

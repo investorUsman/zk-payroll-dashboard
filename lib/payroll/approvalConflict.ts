@@ -187,9 +187,7 @@ export function evaluateApprovalAction(
     case "correction_requested":
       // Resubmit is the one action that legitimately follows this state.
       if (attemptedAction === "resubmitted") {
-        return prior && reviewerName && prior.approvedBy === reviewerName
-          ? conflict("already_decided_by_you", snapshot, attemptedAction, prior)
-          : { ok: true };
+        return { ok: true };
       }
       return conflict("awaiting_correction", snapshot, attemptedAction, prior);
     case "pending_executive_approval":

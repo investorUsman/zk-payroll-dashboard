@@ -387,10 +387,10 @@ describe("AuditExportWizard", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText(
+      screen.getAllByText(
         /expired/i
-      )
-    ).toBeInTheDocument();
+      ).length
+    ).toBeGreaterThan(0);
   });
 
     it("blocks export when the audit grant is revoked", () => {
@@ -416,8 +416,8 @@ describe("AuditExportWizard", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText(/revoked/i)
-    ).toBeInTheDocument();
+      screen.getAllByText(/revoked/i).length
+    ).toBeGreaterThan(0);
   });
   
   it("blocks export when the selected scope is outside the grant", () => {

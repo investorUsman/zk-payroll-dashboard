@@ -27,11 +27,12 @@ import type {
  * mutate their arguments, and never read the clock.
  */
 
-const AUDIENCE_RANK: Record<ErrorAudience, number> = {
+const AUDIENCE_RANK = {
   contributor: 0,
   maintainer: 1,
   auditor: 2,
-};
+  admin: 3,
+} as const;
 
 const DEFAULT_SENSITIVITY: ErrorContextSensitivity = "public";
 
@@ -61,11 +62,10 @@ function fieldSensitivity(
   const leaf = field.split(".").pop() ?? field;
   if (ALWAYS_SENSITIVE_FIELDS.has(leaf)) return "auditor";
 
-  return DEFAULT_SENSITIVITY;
+  return "public";
 }
 
-/** Audience rank threshold — fields at or above this rank are filtered for the audience. */
-function filterRank(audience: ErrorAudience): number {
+function audienceRankOf(audience: ErrorAudience): number {
   return AUDIENCE_RANK[audience];
 }
 
@@ -108,10 +108,12 @@ function filterObject(
     for (const [key, child] of Object.entries(entry)) {
       const path = prefix === "" ? key : `${prefix}.${key}`;
       const sensitivity = fieldSensitivity(path, rules);
-      if (AUDIENCE_RANK[sensitivity] > audienceRank) {
+      if (audienceRankOf(sensitivity as ErrorAudience) > audienceRank) {
         redacted.push(path);
-        const rule = rules.find((r) => r.field === path);
-        if (rule?.mask) {
+      const rule =
+        rules.find((r) => r.field === path) ??
+        rules.find((r) => r.field === (path.split(".").pop() ?? path));
+      if (rule?.mask) {
           filtered[key] = maskValue(child);
         } else {
           filtered[key] = "[redacted]";
@@ -143,8 +145,8 @@ export function filterErrorContext(
   context: unknown,
   options: PrivacySafeErrorContextOptions,
 ): PrivacySafeErrorContextResult {
-  const audienceRank = filterRank(options.audience);
-  const rules = options.rules ?? [];
+  const audienceRank = audienceRankOf(options.audience);
+  const rules = options.rules ?? DEFAULT_ERROR_CONTEXT_RULES;
   const redacted: string[] = [];
   const retained: string[] = [];
 
@@ -173,12 +175,12 @@ export function filterErrorContext(
 export const DEFAULT_ERROR_CONTEXT_RULES: ErrorContextFieldRule[] = [
   { field: "salary", sensitivity: "auditor" },
   { field: "salaryCommitment", sensitivity: "auditor", mask: true },
-  { field: "address", sensitivity: "auditor", mask: true },
+  { field: "address", sensitivity: "auditor" },
   { field: "walletAddress", sensitivity: "auditor", mask: true },
   { field: "payoutDestination", sensitivity: "auditor", mask: true },
-  { field: "employeeId", sensitivity: "maintainer", mask: true },
-  { field: "name", sensitivity: "maintainer", mask: true },
-  { field: "email", sensitivity: "maintainer", mask: true },
+  { field: "employeeId", sensitivity: "auditor", mask: true },
+  { field: "name", sensitivity: "auditor", mask: true },
+  { field: "email", sensitivity: "auditor", mask: true },
 ];
 
 /**

@@ -122,7 +122,17 @@ export function ExecutiveApprovalQueue() {
   };
 
   const handleResubmit = (draft: ApprovalDraft) => {
-    applyDecision(() => resubmitDraft(draft.id, "Payroll Drafter", "Operator"), false);
+    const trimmed = currentComment(draft).trim();
+    applyDecision(
+      () =>
+        resubmitDraft(
+          draft.id,
+          "Payroll Drafter",
+          "Operator",
+          trimmed || undefined,
+        ),
+      false,
+    );
   };
 
   return (

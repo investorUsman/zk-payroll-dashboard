@@ -96,7 +96,7 @@ export function PayrollRunProgressBanner({
             type="button"
             onClick={onResume}
             className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1"
-            aria-label="Resume unfinished payroll run"
+            aria-label="Resume run"
           >
             Resume run
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -105,7 +105,7 @@ export function PayrollRunProgressBanner({
             type="button"
             onClick={handleDismiss}
             className="text-xs font-medium text-amber-700 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 rounded"
-            aria-label="Discard unfinished payroll run and dismiss this notice"
+            aria-label="Discard and dismiss"
           >
             Discard and dismiss
           </button>

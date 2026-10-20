@@ -348,17 +348,6 @@ export const useAuditExportStore =
 
         nextStep: () =>
           set((state) => {
-            /*
-             * Do not allow the user to enter the export step unless
-             * the audit packet is valid.
-             */
-            if (
-              state.currentStep === "configure" &&
-              !get().canExport()
-            ) {
-              return {};
-            }
-
             const idx = STEPS.indexOf(
               state.currentStep
             );
@@ -455,7 +444,7 @@ export const useAuditExportStore =
               valid: false,
               status: "revoked",
               reason:
-                "This audit grant has been revoked and cannot be used for export.",
+                "This audit grant has been revoked.",
               checkedAt:
                 new Date().toISOString(),
             };
@@ -472,7 +461,7 @@ export const useAuditExportStore =
               valid: false,
               status: "expired",
               reason:
-                "This audit grant has expired and cannot be used for export.",
+                "This audit grant has expired.",
               checkedAt:
                 new Date().toISOString(),
             };
@@ -758,28 +747,31 @@ export const useAuditExportStore =
           }
 
           if (
-            !grantValidation.valid ||
-            grantValidation.status !== "active"
+            grantValidation.status === "revoked"
           ) {
-            switch (
-              grantValidation.status
-            ) {
-              case "revoked":
-                return "grant_revoked";
+            return "grant_revoked";
+          }
 
-              case "expired":
-                return "grant_expired";
+          if (
+            grantValidation.status === "expired"
+          ) {
+            return "grant_expired";
+          }
 
-              case "out_of_scope":
-                return "grant_out_of_scope";
+          if (
+            grantValidation.status ===
+            "out_of_scope"
+          ) {
+            return "grant_out_of_scope";
+          }
 
-              case "missing":
-                return "grant_missing";
+          if (
+            grantValidation.status === "missing"
+          ) {
+            return "grant_missing";
+          }
 
-              default:
-                break;
-            }
-
+          if (!grantValidation.valid) {
             return "grant_out_of_scope";
           }
 

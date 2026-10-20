@@ -191,6 +191,7 @@ export const useApprovalQueueStore = create<ApprovalQueueState>()(
             ...d,
             approvalStatus: "pending_executive_approval",
             status: "pending",
+            correctionExpiresAt: undefined,
             approvalHistory: [
               ...(d.approvalHistory || []),
               {

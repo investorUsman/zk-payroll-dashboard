@@ -120,13 +120,13 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
   },
 ];
 
-export const ROUTE_ROLE_RULES: Array<{ prefix: string; roles: UserRole[] }> = [
+export const ROUTE_ROLE_RULES: Array<{ prefix: string; roles: string[] }> = [
   { prefix: '/employees/lifecycle', roles: ['admin'] },
   { prefix: '/employees/add', roles: ['admin'] },
   { prefix: '/employees', roles: ['admin', 'operator'] },
   { prefix: '/payroll/approvals', roles: ['admin', 'operator'] },
   { prefix: '/payroll/snapshots', roles: ['admin', 'operator'] },
-  { prefix: '/payroll/execute', roles: ['admin', 'operator'] },
+  { prefix: '/payroll/execute', roles: ['admin', 'operator', 'payroll-operator'] },
   { prefix: '/payroll/verify', roles: ['admin', 'operator', 'auditor'] },
   { prefix: '/payroll/run', roles: ['admin'] },
   { prefix: '/payroll/exceptions', roles: ['admin', 'operator', 'auditor'] },
@@ -155,7 +155,7 @@ export function getNavigationForRole(role: UserRole): NavigationItem[] {
   return NAVIGATION_ITEMS.filter((item) => item.roles.includes(role));
 }
 
-export function canAccessPath(role: UserRole, pathname: string): boolean {
+export function canAccessPath(role: UserRole | string, pathname: string): boolean {
   const rule = ROUTE_ROLE_RULES.find(({ prefix }) => pathname.startsWith(prefix));
   return !rule || rule.roles.includes(role);
 }

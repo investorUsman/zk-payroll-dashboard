@@ -163,6 +163,13 @@ export function isInputElement(target: EventTarget | null): boolean {
   if (target.isContentEditable) {
     return true;
   }
+  const el = target as HTMLElement & { contentEditable?: string };
+  if (el.isContentEditable || el.contentEditable === "true") {
+    return true;
+  }
+  if (target.getAttribute && (target.getAttribute("contenteditable") === "true" || target.getAttribute("contentEditable") === "true")) {
+    return true;
+  }
 
   const role = target.getAttribute("role");
   if (role === "textbox" || role === "searchbox" || role === "combobox") {

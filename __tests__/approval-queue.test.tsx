@@ -89,6 +89,7 @@ describe("Executive Approval Queue (Issue #218)", () => {
   });
 
   it("allows resubmitting a draft with corrections requested back into the pending queue", () => {
+    const futureExpiry = new Date(Date.now() + SEVEN_DAYS_MS).toISOString();
     useApprovalQueueStore.setState({
       drafts: [
         {
@@ -104,10 +105,11 @@ describe("Executive Approval Queue (Issue #218)", () => {
           requiresExecutiveReview: true,
           employeeIds: ["emp_001"],
           notes: "High-value Q3 bonus run",
+          correctionExpiresAt: futureExpiry,
           approvalHistory: [
             {
               approvedBy: "Executive Admin",
-              approvedAt: "2026-07-29T11:00:00Z",
+              approvedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
               role: "Admin",
               comment: "Please fix employee count",
               action: "correction_requested",

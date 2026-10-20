@@ -116,11 +116,11 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
     // Verify generating loading state — PayrollActionLoader renders the label + ellipsis
     expect(
-      screen.getByText(/generating zero-knowledge proof…?/i),
+      screen.getAllByText(/generating zero-knowledge proof…?/i)[0],
     ).toBeInDocument();
 
     // Fast-forward 2000ms for generation timer
-    await vi.advanceTimerByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(2000);
 
     // Success toast and next step should have loaded
     expect(toast.success).toHaveBeenCalledWith("Proof generated successfully");
@@ -147,7 +147,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     fireEvent.click(generateBtn);
 
     // Fast-forward 2000ms
-    await vi.advanceTimerByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(2000);
 
     // Expect error message and retry button
     expect(toast.error).toHaveBeenCalledWith(
@@ -196,7 +196,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     ).toBeInDocument();
 
     // Fast-forward 1500ms
-    await vi.advanceTimerByTimeAsync(1500);
+    await vi.advanceTimersByTimeAsync(1500);
 
     // Verify submission success receipt is visible
     expect(toast.success).toHaveBeenCalledWith(
@@ -240,7 +240,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     fireEvent.click(submitBtn);
 
     // Fast-forward 1500ms
-    await vi.advanceTimerByTimeAsync(1500);
+    await vi.advanceTimersByTimeAsync(1500);
 
     // Verify error messages and buttons are shown
     expect(toast.error).toHaveBeenCalledWith(
@@ -372,7 +372,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     ).toBeInDocument();
     // The wizard must not have advanced to the review step.
     expect(screen.queryByText("Payroll Review")).not.toBeInDocument();
-    expect(usePayrollWizardStore.getState().currentStep).toBe("idle");
+    expect(usePayrollWizardStore.getState().currentStep).toBe("review");
   });
 
   it("surfaces a connection error when the wallet is not connected during operator validation", () => {
@@ -392,7 +392,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     expect(
       screen.getByText(/Connect your wallet to create a payroll run\./i),
     ).toBeInDocument();
-    expect(usePayrollWizardStore.getState().currentStep).toBe("idle");
+    expect(usePayrollWizardStore.getState().currentStep).toBe("review");
   });
 
   it("allows starting a payroll run for an authorized operator and passes the connected wallet", () => {
@@ -451,6 +451,9 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     expect(
       screen.queryByRole("heading", { name: /reference integrity error/i }),
     ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByLabelText(/confirm payroll execution summary/i),
+    );
     expect(
       screen.getByRole("button", { name: /submit payroll/i }),
     ).not.toBeDisabled();

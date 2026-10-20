@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   isValidRequestId,
   generateSupportDiagnosticBundle,
@@ -47,6 +47,16 @@ describe('requestIdPanel utilities', () => {
 });
 
 describe('RequestIdSupportPanel Component', () => {
+  beforeEach(() => {
+    // jsdom does not implement navigator.clipboard; provide one so the copy
+    // handlers can be exercised.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+      writable: true,
+    });
+  });
+
   it('renders request ID and support panel information', () => {
     render(<RequestIdSupportPanel context={mockContext} />);
     expect(screen.getByText('Support Diagnostic Panel')).toBeInTheDocument();

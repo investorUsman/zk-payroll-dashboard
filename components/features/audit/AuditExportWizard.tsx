@@ -998,24 +998,14 @@ function ExportStep() {
         </label>
       )}
 
-      {!isComplete && !activeExportJob && (
+      {!isComplete && !activeExportJob && exportAllowed && confirmed && (
         <button
           type="button"
           onClick={handleStartExport}
-          disabled={!exportAllowed || !confirmed}
-          className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium ${
-            exportAllowed && confirmed
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-200 text-gray-500 cursor-not-allowed"
-          }`}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700"
         >
           <Download className="w-4 h-4" />
-
-          {!exportAllowed
-            ? "Export Blocked"
-            : !confirmed
-              ? "Confirm Review Before Export"
-              : "Start Secure Export"}
+          Start Secure Export
         </button>
       )}
 
@@ -1211,10 +1201,7 @@ export default function AuditExportWizard() {
      */
     if (currentStep === "configure") {
       validateAuditGrant();
-
-      if (!canExport()) {
-        return;
-      }
+      // Allow proceeding to export step even if blocked so the export step can show the block reason
     }
 
     nextStep();

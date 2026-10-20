@@ -149,10 +149,22 @@ export function scorePayrollReadiness(
   const warnings = signals.filter((s) => s.status === "warn");
   const pending = signals.filter((s) => s.status === "pending");
 
-  const score = signals.reduce(
-    (acc, s) => acc + (s.status === "pass" ? s.weight : 0),
-    0,
-  );
+  // Score starts from a full 100 and each failing signal subtracts its weight.
+  // Signals that have not been evaluated yet are treated as not-yet-subtracted
+  // (operator still has work to do) rather than as failing, so a partially
+  // evaluated run reports a score that reflects the known blockers. When *no*
+  // signal has been evaluated at all the run has not started, so it scores 0.
+  const evaluatedCount = signals.length - pending.length;
+  const score =
+    evaluatedCount === 0
+      ? 0
+      : Math.max(
+          0,
+          signals.reduce(
+            (acc, s) => acc - (s.status === "fail" ? s.weight : 0),
+            100,
+          ),
+        );
 
   const ready = score === 100 && blockers.length === 0 && warnings.length === 0;
 

@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/components/providers/StellarProvider", () => ({
   EXPECTED_NETWORK: "TESTNET",
   useStellar: () => ({
     publicKey: "GTEST123",
   }),
+  useOptionalStellar: () => null,
 }));
 
 import { render, screen } from "@testing-library/react";
@@ -12,6 +13,24 @@ import PayrollWizard from "@/components/features/payroll/PayrollWizard";
 import PayrollRunDetail from "@/components/features/payroll/PayrollRunDetail";
 import PayrollComparison from "@/components/features/payroll/PayrollComparison";
 import type { PayrollRun } from "@/types/models";
+
+// PayrollRunDetail renders a "cache freshness" indicator seeded from the wall
+// clock (new Date()), so the committed snapshots capture the moment they were
+// generated. Pin the system time to that instant to keep snapshot rendering
+// deterministic — the component itself is intentionally clock-driven. The
+// committed values were rendered in UTC (the reference environment), so force
+// UTC for this file to keep the formatted timestamp stable across host zones.
+process.env.TZ = "UTC";
+const SNAPSHOT_TIME = new Date("2026-09-30T09:35:00Z");
+
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(SNAPSHOT_TIME);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const mockPayrollRuns: PayrollRun[] = [
   {

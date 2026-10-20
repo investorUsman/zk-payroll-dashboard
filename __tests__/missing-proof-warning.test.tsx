@@ -86,7 +86,21 @@ describe("PayrollRunDetail — proof missing blocks execution", () => {
     // Fresh proof should allow Process payroll (scheduled + not locked + not expired/missing)
     // Note: PayrollRunDetail uses Date.now() for freshness, so we use far-future expiry
     const futureRef = { ...freshRef, expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString() };
-    render(<PayrollRunDetail run={scheduledRun({ id: "tx_100" })} proofReference={futureRef} />);
+    // A past approval timestamp keeps the approval window "active" (not
+    // invalid); a far-future one would be rejected as a future timestamp.
+    // status must be "scheduled" — "pending" without a txHash locks the run
+    // for submission, which hides the execution action entirely.
+    const approvedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    render(
+      <PayrollRunDetail
+        run={scheduledRun({
+          id: "tx_100",
+          status: "scheduled" as const,
+          approvalHistory: [{ approvedBy: "admin", approvedAt, role: "admin" }],
+        })}
+        proofReference={futureRef}
+      />,
+    );
     expect(screen.queryByTestId("missing-proof-warning")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Process payroll/i })).toBeInTheDocument();
   });
@@ -105,6 +119,7 @@ describe("PayrollRunDetail — proof missing blocks execution", () => {
       <PayrollRunDetail
         run={scheduledRun({
           id: "tx_101",
+          status: "scheduled" as const,
           approvalHistory: [{ approvedBy: "admin", approvedAt: "invalid-timestamp", role: "admin" }],
         })}
         proofReference={futureRef}

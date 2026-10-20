@@ -81,7 +81,7 @@ export function getDeactivatedAssetWarning(
     symbol: normalizedSymbol,
     title: `Deactivated Asset Alert: ${normalizedSymbol}`,
     message: `Asset '${normalizedSymbol}' has been deactivated and is not permitted for payroll disbursements. ${sanitizedReason}`,
-    remediation: `Please select an active settlement asset (such as USDC or XLM) from Treasury Settings prior to submitting this batch.`,
+    remediation: `Select an active settlement asset (such as USDC or XLM) from Treasury Settings prior to submitting this batch.`,
     deactivatedAt: asset?.deactivatedAt,
     reason: sanitizedReason,
   };

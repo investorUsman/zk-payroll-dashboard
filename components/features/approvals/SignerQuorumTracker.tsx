@@ -64,8 +64,12 @@ function SignerRow({ signer }: { signer: Signer }) {
           {roleLabel(signer.role)}
         </span>
       </div>
-      <span className={`text-xs font-medium ${config.color}`}>
-        {statusLabel(signer.status)}
+      <span
+        className={`text-xs font-medium ${config.color}`}
+        aria-label={statusLabel(signer.status)}
+        title={statusLabel(signer.status)}
+      >
+        {config.icon}
       </span>
     </div>
   );
