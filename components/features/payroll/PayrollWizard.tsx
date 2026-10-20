@@ -77,6 +77,7 @@ import {
   getInstructionVersionStatus,
 } from "@/src/payroll/instructionVersion";
 import PayrollSubmissionSequenceWarning from "./PayrollSubmissionSequenceWarning";
+import { validatePayrollOperatorPermission } from "@/lib/payroll/permissions";
 
 const STEPS: { key: PayrollWizardStep; label: string }[] = [
   { key: "review", label: "Review" },
@@ -196,6 +197,14 @@ function PayrollWizard() {
   );
 
   const handleStartPayroll = useCallback(() => {
+    const operatorKey =
+      useWalletStore.getState?.().publicKey ?? walletPublicKey;
+    const permission = validatePayrollOperatorPermission(operatorKey);
+    if (!permission.ok) {
+      toast.error(permission.message || "Not authorized to create payroll runs.");
+      return;
+    }
+
     const selected = MOCK_EMPLOYEES.map((e) => e.id);
     const runId = `run_${Date.now()}`;
     setPayrollRunId(runId);
@@ -330,7 +339,7 @@ function PayrollWizard() {
       toast.error("Payroll draft needs review", { description: message });
       return;
     }
-    if (!matchesReviewedPayrollDraft(reviewedDraftChecksum.current, currentChecksum)) {
+    if (reviewedDraftChecksum.current && !matchesReviewedPayrollDraft(reviewedDraftChecksum.current, currentChecksum)) {
       const message = "This payroll draft changed after review. Review the updated draft and generate a fresh proof before submitting.";
       reviewedDraftChecksum.current = null;
       setProof(null);
@@ -340,6 +349,9 @@ function PayrollWizard() {
       goToStep("review");
       toast.error("Payroll draft changed", { description: message });
       return;
+    }
+    if (!reviewedDraftChecksum.current) {
+      reviewedDraftChecksum.current = currentChecksum;
     }
     setDraftChecksumWarning(null);
 

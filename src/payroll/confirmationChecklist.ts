@@ -128,9 +128,13 @@ export function evaluateConfirmationReadiness(
   const optionalItems = items.filter((i) => !i.isRequired);
   const unmetItems = requiredItems.filter((i) => !i.isVerified);
   const verifiedRequiredCount = requiredItems.length - unmetItems.length;
-  const verifiedCount = items.filter((i) => i.isVerified).length;
+  // Progress measures the path to confirmability: the required checks. An
+  // optional check can be verified at any time and never moves this needle,
+  // so a reviewer sees 100% exactly when confirmation is unblocked.
   const progressPercent =
-    items.length === 0 ? 100 : Math.round((verifiedCount / items.length) * 100);
+    requiredItems.length === 0
+      ? 100
+      : Math.round((verifiedRequiredCount / requiredItems.length) * 100);
   const canConfirm = requiredItems.length > 0 && unmetItems.length === 0;
 
   let statusMessage: string;

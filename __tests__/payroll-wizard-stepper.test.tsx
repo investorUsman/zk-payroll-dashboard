@@ -29,6 +29,7 @@ vi.mock("@/components/providers/StellarProvider", () => ({
   useStellar: () => ({
     publicKey: "GTEST123",
   }),
+  useOptionalStellar: () => null,
 }));
 
 /**

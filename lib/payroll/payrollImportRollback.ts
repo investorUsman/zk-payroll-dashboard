@@ -1,11 +1,11 @@
 import type {
-  DEFAULT_PAYROLL_IMPORT_ROLLBACK_POLICY,
   PayrollImportBatch,
   PayrollImportBatchStatus,
   PayrollImportRollbackEvaluation,
   PayrollImportRollbackPolicy,
   PayrollImportRollbackDecision,
 } from "@/types/models";
+import { DEFAULT_PAYROLL_IMPORT_ROLLBACK_POLICY } from "@/types/models";
 
 /**
  * Dashboard payroll import rollback support (#686).
@@ -66,17 +66,38 @@ export function evaluatePayrollImportRollback(
   const resolvedPolicy = normalizePolicy(policy);
   const resolvedNow = parseNow(now);
 
-  let resolvedBatch: PayrollImportBatch;
-  try {
-    resolvedBatch = batch as PayrollImportBatch;
-  } catch {
-    resolvedBatch = {
+  // Reject malformed batch input up front: only a plain object with a usable
+  // id can be evaluated. Anything else is reported as `unknown_batch` rather
+  // than trusted (a cast alone never throws).
+  const looksLikeBatch =
+    typeof batch === "object" &&
+    batch !== null &&
+    typeof (batch as { id?: unknown }).id === "string" &&
+    (batch as { id: string }).id.trim().length > 0;
+
+  if (!looksLikeBatch) {
+    const fallbackBatch: PayrollImportBatch = {
       id: "unknown",
       importedAt: new Date(resolvedNow).toISOString(),
       recordCount: 0,
       status: "failed",
     };
+    const decision: PayrollImportRollbackDecision = {
+      allowed: false,
+      reason: "unknown_batch",
+      message:
+        "The payroll import batch could not be read, so rollback eligibility cannot be determined. Verify the batch id and retry.",
+      remainingWindowHours: null,
+    };
+    return {
+      batch: fallbackBatch,
+      allowed: false,
+      decision,
+      canRollback: false,
+    };
   }
+
+  const resolvedBatch = batch as PayrollImportBatch;
 
   const decision: PayrollImportRollbackDecision = decideRollback(resolvedBatch, resolvedPolicy, resolvedNow);
 

@@ -6,8 +6,8 @@ import type {
   CompensationGroupMembershipResult,
   CompensationGroupMembershipSeverity,
   CompensationGroupStatus,
-  DEFAULT_COMPENSATION_GROUP_REMEDIATION_ACTION,
 } from "@/types/compensation";
+import { DEFAULT_COMPENSATION_GROUP_REMEDIATION_ACTION } from "@/types/compensation";
 
 /**
  * Dashboard compensation group membership validation (#687).
@@ -369,9 +369,4 @@ export type {
   CompensationGroupMembershipSeverity,
   CompensationGroupStatus,
 };
-export {
-  DEFAULT_COMPENSATION_GROUP_REMEDIATION_ACTION,
-  evaluateCompensationGroupMembership,
-  assertCompensationGroupMembership,
-  CompensationGroupMembershipError,
-};
+export { DEFAULT_COMPENSATION_GROUP_REMEDIATION_ACTION };

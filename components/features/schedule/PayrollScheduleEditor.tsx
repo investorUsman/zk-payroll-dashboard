@@ -8,6 +8,7 @@ import { getCalendarMonthDays, formatPayrollMonthYear } from "@/lib/payroll/sche
 import {
   computeTemplateOccurrences,
   findMissedOccurrences,
+  rangesOverlap,
   toDateKey,
 } from "@/lib/date/scheduleWindows";
 import { useDraftScheduleWindowStore } from "@/stores/draftScheduleWindows";
@@ -23,6 +24,7 @@ interface DayEntry {
 
 function DraftWindowForm({ templates }: { templates: PayrollTemplate[] }) {
   const upsertDraft = useDraftScheduleWindowStore((s) => s.upsertDraft);
+  const drafts = useDraftScheduleWindowStore((s) => s.drafts);
 
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [windowStart, setWindowStart] = useState("");
@@ -37,6 +39,37 @@ function DraftWindowForm({ templates }: { templates: PayrollTemplate[] }) {
 
     if (windowStart > windowEnd) {
       setError("Window start must be on or before window end.");
+      return;
+    }
+
+    // The store only rejects windows that overlap within the same template.
+    // Windows from *different* templates may still collide on the same
+    // settlement period, which is an operational risk worth surfacing here
+    // (named templates so the user knows which schedule collides) even
+    // though each template's own draft list stays valid.
+    const candidate = { start: windowStart, end: windowEnd };
+    const crossTemplateConflicts = drafts.filter(
+      (draft) =>
+        draft.templateId !== templateId &&
+        rangesOverlap(candidate, { start: draft.windowStart, end: draft.windowEnd }),
+    );
+
+    if (crossTemplateConflicts.length > 0) {
+      const conflictingTemplateNames = Array.from(
+        new Set(
+          crossTemplateConflicts.map(
+            (draft) => templates.find((t) => t.id === draft.templateId)?.name ?? draft.templateId,
+          ),
+        ),
+      );
+      setError(
+        `This window overlaps with ${crossTemplateConflicts.length} existing draft window${
+          crossTemplateConflicts.length === 1 ? "" : "s"
+        } from ${conflictingTemplateNames.join(", ")}.`,
+      );
+      toast.error("Overlapping settlement window", {
+        description: "Adjust the dates so drafts don't overlap.",
+      });
       return;
     }
 

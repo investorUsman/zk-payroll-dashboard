@@ -640,9 +640,7 @@ export const useAuditExportStore =
             nextRedactions[field] = {
               field,
               sensitive,
-              redacted:
-                sensitive &&
-                !explicitlyAllowed,
+              redacted: sensitive,
               reason: sensitive
                 ? "Sensitive field is redacted by default."
                 : undefined,

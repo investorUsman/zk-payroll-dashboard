@@ -894,6 +894,11 @@ function TransactionHistoryInner({
                     className="px-6 py-3 text-xs font-medium text-gray-400 uppercase"
                   >
                     Reconciliation
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-xs font-medium text-gray-400 uppercase"
+                  >
                     Progress
                   </th>
                   <th
@@ -1066,6 +1071,11 @@ function TransactionHistoryInner({
                     className="px-6 py-3 text-xs font-medium text-gray-600 uppercase"
                   >
                     Reconciliation
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-xs font-medium text-gray-600 uppercase"
+                  >
                     Progress
                   </th>
                   <th

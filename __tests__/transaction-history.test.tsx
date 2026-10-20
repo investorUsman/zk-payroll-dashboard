@@ -227,9 +227,7 @@ describe("TransactionHistory – archived mode", () => {
     fireEvent.change(runIdInput, { target: { value: "tx_999" } });
 
     expect(
-      screen.getAllByText(
-        /No transactions match the current filters/i
-      )[0]
+      screen.getByText(/No archived payrolls match the current filters/i),
     ).toBeInTheDocument();
   });
 });

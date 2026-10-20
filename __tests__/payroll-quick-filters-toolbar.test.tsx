@@ -160,8 +160,9 @@ describe("TransactionHistory quick filters integration", () => {
     expect(within(statusGroup).getByRole("checkbox", { name: /Verified \(1/ })).toBeInTheDocument();
 
     fireEvent.click(within(statusGroup).getByRole("checkbox", { name: /Pending/ }));
+    // Archived pool is tx_002 (verified) + tx_005 (failed): no pending runs.
     expect(
-      screen.getByText(/Showing 0 of 1 archived payrolls/),
+      screen.getByText(/Showing 0 of 2 archived payrolls/),
     ).toBeInTheDocument();
   });
 

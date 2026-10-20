@@ -18,3 +18,6 @@ export * from "./historicalPayrollAccessAuthorization";
 export * from "./payrollImportRollback";
 export * from "./compensationGroupMembership";
 export * from "./payoutConfirmationRetryPolicy";
+export * from "./duplicatePayoutDetection";
+export * from "./periodReopenRestrictions";
+export * from "./draftComparisonSnapshot";

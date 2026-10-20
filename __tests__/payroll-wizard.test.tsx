@@ -33,6 +33,7 @@ vi.mock("@/components/providers/StellarProvider", () => ({
   useStellar: () => ({
     publicKey: "GTEST123",
   }),
+  useOptionalStellar: () => null,
 }));
 
 // Mock the payroll operator permission validation module so tests can control
@@ -44,8 +45,8 @@ vi.mock("@/lib/payroll/permissions", () => ({
 import { validatePayrollOperatorPermission } from "@/lib/payroll/permissions";
 
 const validateOperatorMock = validatePayrollOperatorPermission as unknown as ReturnType<
-  typeof validatePayrollOperatorPermission
-~;
+  typeof vi.fn
+>;
 
 describe("PayrollWizard UI & Receipt Flow", () => {
   beforeEach(() => {
@@ -53,12 +54,12 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     vi.clearAllMocks();
     usePayrollWizardStore.getState().reset();
     // Default to an authorized operator so existing flows are unaffected.
-    validateOperatorMock.mockReturn = {
+    validateOperatorMock.mockReturnValue({
       ok: true,
       reason: null,
       message: null,
       operator: "GTEST123",
-    } as any;
+    } as any);
   });
 
   afterEach(() => {
@@ -96,7 +97,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
   it("transitions to proof generation step and handles successful generation", async () => {
     // Mock Math.random to guarantee success (> 0.2)
-    const randomSpy = vi.spyOn($Math, "random").mockReturnValue(0.5);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
 
     const { toast } = await import("sonner");
 
@@ -115,7 +116,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
     // Verify generating loading state — PayrollActionLoader renders the label + ellipsis
     expect(
-      screen.getByText(/generating zero-knowledge proof…?\/i),
+      screen.getByText(/generating zero-knowledge proof…?/i),
     ).toBeInDocument();
 
     // Fast-forward 2000ms for generation timer
@@ -132,7 +133,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
   it("handles failed proof generation and allows retry", async () => {
     // Mock Math.random to guarantee failure (<= 0.2)
-    const randomSpy = vi.spyOn($Math, "random").mockReturnValue(0.1);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
 
     const { toast } = await import("sonner");
 
@@ -195,7 +196,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     ).toBeInDocument();
 
     // Fast-forward 1500ms
-    await vin.advanceTimerByTimeAsync(1500);
+    await vi.advanceTimerByTimeAsync(1500);
 
     // Verify submission success receipt is visible
     expect(toast.success).toHaveBeenCalledWith(
@@ -298,7 +299,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
     ).toBeInDocument();
     expect(
       screen.getByRole("button", { name: /submit payroll/i }),
-    ).toBeeDisabled();
+    ).toBeDisabled();
   });
 
   it("renders draft recovery banner when draft is found, and handles continue/discard actions", () => {
@@ -349,12 +350,12 @@ describe("PayrollWizard UI & Receipt Flow", () => {
   });
 
   it("blocks starting a payroll run when the connected wallet is not an authorized operator", () => {
-    validateOperatorMock.mockReturn = {
+    validateOperatorMock.mockReturnValue({
       ok: false,
       reason: "not_authorized",
       message: "Wallet is not authorized to create payroll runs.",
       operator: "GTEST123",
-    } as any;
+    } as any);
 
     render(<PayrollWizard />);
 
@@ -375,12 +376,12 @@ describe("PayrollWizard UI & Receipt Flow", () => {
   });
 
   it("surfaces a connection error when the wallet is not connected during operator validation", () => {
-    validateOperatorMock.mockReturn = {
+    validateOperatorMock.mockReturnValue({
       ok: false,
       reason: "not_connected",
       message: "Connect your wallet to create a payroll run.",
       operator: null,
-    } as any;
+    } as any);
 
     render(<PayrollWizard />);
 
@@ -395,12 +396,12 @@ describe("PayrollWizard UI & Receipt Flow", () => {
   });
 
   it("allows starting a payroll run for an authorized operator and passes the connected wallet", () => {
-    validateOperatorMock.mockReturn = {
+    validateOperatorMock.mockReturnValue({
       ok: true,
       reason: null,
       message: null,
       operator: "GTEST123",
-    } as any;
+    } as any);
 
     render(<PayrollWizard />);
 
@@ -425,13 +426,13 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
     expect(
       screen.getByRole("heading", { name: /reference integrity error/i }),
-    ).toBeIntheDocument();
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/unknown employee reference/i),
-    ).toBeIntheDocument();
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/emp_missing/i),
-    ).toBeIntheDocument();
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /submit payroll/i }),
     ).toBeDisabled();
@@ -449,7 +450,7 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
     expect(
       screen.queryByRole("heading", { name: /reference integrity error/i }),
-    ).not.toBeIntheDocument();
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /submit payroll/i }),
     ).not.toBeDisabled();
@@ -467,10 +468,10 @@ describe("PayrollWizard UI & Receipt Flow", () => {
 
     expect(
       screen.getByRole("heading", { name: /reference integrity error/i }),
-    ).toBeIntheDocument();
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/at least one employee/i),
-    ).toBeIntheDocument();
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /submit payroll/i }),
     ).toBeDisabled();

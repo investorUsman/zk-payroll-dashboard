@@ -186,7 +186,7 @@ describe("PayrollScheduleEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /save draft window/i }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByText("2025-04-01 ‒ 2025-04-10")).toBeInTheDocument();
+    expect(screen.getByText("2025-04-01 → 2025-04-10")).toBeInTheDocument();
     expect(screen.getByText("2025-04-11 → 2025-04-20")).toBeInTheDocument();
   });
 

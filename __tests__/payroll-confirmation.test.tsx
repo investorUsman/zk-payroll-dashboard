@@ -28,6 +28,7 @@ vi.mock("@/components/providers/StellarProvider", () => ({
   useStellar: () => ({
     publicKey: "GTEST123",
   }),
+  useOptionalStellar: () => null,
 }));
 
 // The demo dataset keeps tx_003 perpetually "pending" for the only two active

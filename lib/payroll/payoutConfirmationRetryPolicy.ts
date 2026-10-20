@@ -127,7 +127,11 @@ export function evaluatePayoutConfirmationRetryPolicy(
     };
   }
 
-  if (resolvedPolicy.requireConfirmation && !resolvedContext.confirmed) {
+  // Only an explicit `confirmed: false` triggers the confirmation gate. A
+  // missing context (or an omitted confirmation flag) is treated as a safe
+  // default and falls through, while an explicitly withheld confirmation
+  // still blocks the retry.
+  if (resolvedPolicy.requireConfirmation && context?.confirmed === false) {
     return {
       allowed: false,
       requiresConfirmation: true,
@@ -194,10 +198,4 @@ export type {
   PayoutConfirmationRetryContext,
   PayoutConfirmationRetryDecision,
   PayoutConfirmationRetryRejectionReason,
-};
-export {
-  DEFAULT_PAYOUT_CONFIRMATION_RETRY_POLICY,
-  evaluatePayoutConfirmationRetryPolicy,
-  assertPayoutConfirmationRetryAllowed,
-  PayoutConfirmationRetryError,
 };

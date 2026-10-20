@@ -34,14 +34,6 @@ export const useDraftScheduleWindowStore = create<DraftScheduleWindowStore>((set
   setDrafts: (drafts) => set({ drafts }),
 
   upsertDraft: (input) => {
-    const candidate: DateRange = { start: input.windowStart, end: input.windowEnd };
-    const existingRanges = get().drafts.map((d) => ({
-      id: d.id,
-      range: { start: d.windowStart, end: d.windowEnd },
-    }));
-
-    const overlapCheck = findOverlappingWindows(candidate, existingRanges, input.id);
-
     const window: DraftSettlementWindow = {
       id: input.id ?? generateDraftId(),
       templateId: input.templateId,
@@ -49,6 +41,25 @@ export const useDraftScheduleWindowStore = create<DraftScheduleWindowStore>((set
       windowEnd: input.windowEnd,
       createdAt: new Date().toISOString(),
     };
+
+    // A window whose start falls after its end is not a valid range.
+    if (input.windowStart > input.windowEnd) {
+      return { success: false, window, conflictsWith: [] };
+    }
+
+    // Only windows belonging to the *same* template are hard conflicts:
+    // two different templates may legitimately target the same settlement
+    // period (the schedule editor surfaces that as a collision warning
+    // without blocking the draft).
+    const candidate: DateRange = { start: input.windowStart, end: input.windowEnd };
+    const existingRanges = get()
+      .drafts.filter((d) => d.templateId === input.templateId)
+      .map((d) => ({
+        id: d.id,
+        range: { start: d.windowStart, end: d.windowEnd },
+      }));
+
+    const overlapCheck = findOverlappingWindows(candidate, existingRanges, input.id);
 
     if (overlapCheck.hasOverlap) {
       return { success: false, window, conflictsWith: overlapCheck.conflictsWith };

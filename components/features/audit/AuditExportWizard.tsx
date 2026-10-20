@@ -349,8 +349,8 @@ function SelectStep() {
                   ? "bg-blue-50/50"
                   : ""
               }`}
+              aria-label={`${entry.title}, ${TYPE_LABELS[entry.type]}, ${entry.summary}, ${new Date(entry.date).toLocaleDateString()}`}
             >
-              <span className="sr-only">{entry.title}</span>
               <input
                 id={`entry-${entry.id}`}
                 type="checkbox"
@@ -363,7 +363,7 @@ function SelectStep() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium" aria-hidden="true">
                     {entry.title}
                   </span>
 
@@ -372,11 +372,11 @@ function SelectStep() {
                   </span>
                 </div>
 
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1" aria-hidden="true">
                   {entry.summary}
                 </p>
 
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1" aria-hidden="true">
                   {new Date(
                     entry.date
                   ).toLocaleDateString()}

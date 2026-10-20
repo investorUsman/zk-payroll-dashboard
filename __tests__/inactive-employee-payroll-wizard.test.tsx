@@ -20,6 +20,7 @@ vi.mock("@/stores/walletStore", () => ({
 vi.mock("@/components/providers/StellarProvider", () => ({
   EXPECTED_NETWORK: "TESTNET",
   useStellar: () => ({ publicKey: "GTEST123" }),
+  useOptionalStellar: () => null,
 }));
 
 // The demo roster has no suspended employee, so suspend emp_002 to prove the

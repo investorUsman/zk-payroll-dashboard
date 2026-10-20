@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Payroll Duplicate Payout Instruction Detection (#682)**: Pure guard `src/payroll/duplicatePayoutDetection.ts` comparing a candidate payout batch against sent/queued history (instruction-id collisions, batch-reference collisions, same-period recipient overlap, identical batches) with intra-batch merging from the #633 engine; privacy-safe masked findings and `assertNoDuplicatePayout`.
+- **Payroll Period Reopening Restrictions (#680)**: Pure guard `src/payroll/periodReopenRestrictions.ts` enforcing authenticated privileged roles, 10–500 character reasons, 30-day close window, max reopen cycles, and admin elevation when executed payouts exist; structured decisions with audit markers.
+- **Treasury Balance Buffer Enforcement (#679)**: Pure checker `lib/treasury/balanceBuffer.ts` using bigint minor-unit math (`max(percent of balance, minBufferAmount)`, 5%/25k default) with `sufficient`/`buffer_breach`/`insufficient`/`invalid_input` verdicts, safe override gating, and `assertTreasuryBalanceBuffer`.
+- **Draft Payroll Comparison Snapshot (#677)**: Snapshot utility `src/payroll/draftComparisonSnapshot.ts` reusing `computeBatchDiff`/`summarizeBatchDiff` for before/after/delta totals, staleness/revision checks, `requiresReapproval`/blocked rows, and privacy-safe audit summaries.
 
 - **Dashboard Treasury Liquidity Reserve Monitoring (#630)**: Dashboard card showing whether the treasury can fund the next payroll run and how the balance compares with a target reserve.
   - Pure evaluation module `lib/treasury/liquidityReserve.ts` with `evaluateTreasuryLiquidityReserve`, returning the reserve ratio, payroll runs covered, shortfall, and amount below target; money math runs on 7-decimal integer base units rather than floats
